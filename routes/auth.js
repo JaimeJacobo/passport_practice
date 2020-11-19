@@ -5,6 +5,7 @@ const passport = require('passport')
 const ensureLogin = require('connect-ensure-login')
 
 const User = require('../models/User')
+const Quote = require('../models/Quote')
 
 
 router.get('/signup', (req, res, next) => {
@@ -55,4 +56,61 @@ router.get('/logout', (req, res)=>{
   res.redirect('/')
 })
 
+const checkForAuthentification = (req, res, next)=>{
+  if(req.isAuthenticated()){
+    return next()
+  } else {
+    res.redirect('login')
+  }
+} 
+
+router.get('/quotes', checkForAuthentification, (req, res)=>{
+
+  Quote.find({owner: req.user._id})
+    .then((result)=>{
+      res.render('myQuotes', {quotes: result})
+    })
+    .catch((err)=>{
+      res.send(err)
+    })
+})
+
+router.get('/create-quote', checkForAuthentification, (req, res)=>{
+  res.render('createQuote')
+})
+
+router.post('/quotes', (req, res)=>{
+  const {artist, songName, quoteContent} = req.body
+  const id = req.user._id
+
+  Quote.create({artist, songName, quoteContent, owner: id})
+    .then(() => res.redirect('/quotes'))
+    .catch((err) => res.send(err))
+})
+
+router.get('/all-quotes', checkForAuthentification, (req, res)=>{
+  Quote.find({})
+    .then((result)=>{
+      res.render('allQuotes', {quotes: result})
+    })
+    .catch((err)=>{
+      res.send(err)
+    })
+})
+
+router.get('/quote/:id', (req, res)=>{
+  const id = req.params.id
+  
+  Quote.findOne({_id: id})
+    .then((result)=>{
+      if(result.owner.toString() == req.user._id.toString()){
+        res.render('oneQuote')
+      } else {
+        res.redirect('/')        
+      }
+    })
+})
+
 module.exports = router;
+
+
